@@ -238,7 +238,7 @@ app.get('/:short_url', async (req, res) => {
   }
 });
 
-const PORT = 3003;
+const PORT = process.env.PORT || 3003;
 app.listen(PORT, () => {
     console.log(`App running in port ${PORT}`);
 });
