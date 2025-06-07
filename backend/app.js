@@ -80,15 +80,15 @@ app.get("/test", async (req, res) => {
     }
 });
 
-async function generateUniqueShortUrl(full_url) {
+async function generateUniqueShortUrl(full_url,email) {
   const maxRetries = 5;
   for (let i = 0; i < maxRetries; i++) {
     if (i) console.log(`retries hit: ${i}`);
     const id = nanoid(8);
     try {
       const result = await db.query(
-        'INSERT INTO url_map (short_url, full_url) VALUES ($1, $2) RETURNING *',
-        [id, full_url]
+        'INSERT INTO url_map (short_url, full_url, owner) VALUES ($1, $2, $3) RETURNING *',
+        [id, full_url,email]
       );
       return result.rows[0];
     } catch (err) {
@@ -102,14 +102,14 @@ async function generateUniqueShortUrl(full_url) {
 }
 
 app.post('/create', async (req, res) => {
-  const { full_url } = req.body;
+  const { full_url,email } = req.body;
 
   if (!full_url) {
     return res.status(400).json({ error: 'full_url is required' });
   }
 
   try {
-    const newEntry = await generateUniqueShortUrl(full_url);
+    const newEntry = await generateUniqueShortUrl(full_url,email);
     res.status(201).json({
       short_url: client_url + newEntry.short_url,
       full_url: newEntry.full_url
@@ -124,6 +124,7 @@ app.post('/create', async (req, res) => {
 
 
 app.get('/urls', async (req, res) => {
+    const email=req.email;
   try {
     const result = await db.query(`
       SELECT 
@@ -133,9 +134,10 @@ app.get('/urls', async (req, res) => {
         COUNT(v.id) AS visits
       FROM url_map u
       LEFT JOIN url_visits v ON u.short_url = v.short_url
+      WHERE u.owner = $1
       GROUP BY u.id, u.short_url, u.full_url
       ORDER BY u.id DESC
-    `);
+    `,[email]);
     res.json(result.rows);
   } catch (err) {
     console.error(err);
