@@ -124,7 +124,8 @@ app.post('/create', async (req, res) => {
 
 
 app.get('/urls', async (req, res) => {
-    const email=req.email;
+    const email=req.query.email;
+    // console.log(email)
   try {
     const result = await db.query(`
       SELECT 

@@ -29,91 +29,111 @@ import {
   MousePointer,
 } from "lucide-react";
 
+import { useAuth0 } from "@auth0/auth0-react";
+import UserAvatar from "../components/UserAvatar";
+import LandingPage from "../components/LandingPage";
+
 const URLManager = () => {
   const [urls, setUrls] = useState([]);
   const [selectedUrl, setSelectedUrl] = useState(null);
   const [newUrl, setNewUrl] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingLocal, setIsLoadingLocal] = useState(false);
   const [activeTab, setActiveTab] = useState("dashboard");
-  const [copySuccess, setCopySuccess] = useState(""); 
+  const [copySuccess, setCopySuccess] = useState("");
   const [visitData, setVisitData] = useState([]);
   const [deviceData, setDeviceData] = useState([]);
   const [osData, setOsData] = useState([]);
   const [visitDetails, setVisitDetails] = useState([]);
-  const API_BASE_URL = "http://192.168.31.232:3003";
+  const API_BASE_URL = "http://localhost:3003" || import.meta.env.VITE_back_url;
   const ip = API_BASE_URL + "/";
+  const [user_mail, setUser_mail] = useState("");
 
-  
+  const { user, isLoading, loginWithRedirect, logout, isAuthenticated } =
+    useAuth0();
+
   const COLORS = ["#3B82F6", "#10B981", "#F59E0B"];
 
   useEffect(() => {
-    
     const fetchUrls = async () => {
       try {
-        setIsLoading(true);
-        const response = await fetch(`${API_BASE_URL}/urls`);
-        const data = await response.json();
-        setUrls(data);
-        if (data.length > 0) {
-          setSelectedUrl(data[0]);
+        setIsLoadingLocal(true);
+        if (!isLoading && isAuthenticated && user) {
+          console.log("User info:", user.email);
+          // setUser_mail(user.email); // Set email here
+          const response = await fetch(
+            `${API_BASE_URL}/urls?email=${user.email}`
+          );
+          // const response = await fetch(`${API_BASE_URL}/urls?email=${encodeURIComponent(user.email)}`);
+          const data = await response.json();
+          setUrls(data);
+          if (data.length > 0) {
+            setSelectedUrl(data[0]);
+          } else console.log("length 0");
         }
       } catch (error) {
         console.error("Error fetching URLs:", error);
       } finally {
-        setIsLoading(false);
+        setIsLoadingLocal(false);
       }
     };
 
     fetchUrls();
-  }, []);
+  }, [isLoading, isAuthenticated, user]); // Add these as dependencies
 
   useEffect(() => {
-    
     const fetchAnalyticsData = async () => {
-  if (!selectedUrl) return;
+      if (!selectedUrl) return;
 
-  try {
-    setIsLoading(true);
-    
-    const visitsResponse = await fetch(`${API_BASE_URL}/analytics/${selectedUrl.short_url}/visits-by-date`);
-    const visitsData = await visitsResponse.json();
-    setVisitData(visitsData.map(item => ({
-      ...item,
-      date: new Date(item.date).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-      }), 
-      visits: Number(item.visits) 
-    })));
-    // console.log('Visit Data:', visitsData); 
+      try {
+        setIsLoadingLocal(true);
 
+        const visitsResponse = await fetch(
+          `${API_BASE_URL}/analytics/${selectedUrl.short_url}/visits-by-date`
+        );
+        const visitsData = await visitsResponse.json();
+        setVisitData(
+          visitsData.map((item) => ({
+            ...item,
+            date: new Date(item.date).toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+            }),
+            visits: Number(item.visits),
+          }))
+        );
+        // console.log('Visit Data:', visitsData);
 
-    
-    const devicesResponse = await fetch(`${API_BASE_URL}/analytics/${selectedUrl.short_url}/devices`);
-    const devicesData = await devicesResponse.json();
-    setDeviceData(devicesData.map((item, index) => ({
-      ...item,
-      value: Number(item.value), 
-      color: COLORS[index % COLORS.length]
-    })));
-    // console.log('Device Data:', devicesData); 
+        const devicesResponse = await fetch(
+          `${API_BASE_URL}/analytics/${selectedUrl.short_url}/devices`
+        );
+        const devicesData = await devicesResponse.json();
+        setDeviceData(
+          devicesData.map((item, index) => ({
+            ...item,
+            value: Number(item.value),
+            color: COLORS[index % COLORS.length],
+          }))
+        );
+        // console.log('Device Data:', devicesData);
 
-    
-    const osResponse = await fetch(`${API_BASE_URL}/analytics/${selectedUrl.short_url}/oses`);
-    const osData = await osResponse.json();
-    setOsData(osData);
+        const osResponse = await fetch(
+          `${API_BASE_URL}/analytics/${selectedUrl.short_url}/oses`
+        );
+        const osData = await osResponse.json();
+        setOsData(osData);
 
-    
-    const visitDetailsResponse = await fetch(`${API_BASE_URL}/analytics/${selectedUrl.short_url}/visits`);
-    const visitDetailsData = await visitDetailsResponse.json();
-    setVisitDetails(visitDetailsData);
-  } catch (error) {
-    console.error('Error fetching analytics data:', error);
-  } finally {
-    setIsLoading(false);
-  }
-};
+        const visitDetailsResponse = await fetch(
+          `${API_BASE_URL}/analytics/${selectedUrl.short_url}/visits`
+        );
+        const visitDetailsData = await visitDetailsResponse.json();
+        setVisitDetails(visitDetailsData);
+      } catch (error) {
+        console.error("Error fetching analytics data:", error);
+      } finally {
+        setIsLoadingLocal(false);
+      }
+    };
 
     fetchAnalyticsData();
   }, [selectedUrl]);
@@ -122,13 +142,13 @@ const URLManager = () => {
     if (!newUrl.trim()) return;
 
     try {
-      setIsLoading(true);
+      setIsLoadingLocal(true);
       const response = await fetch(`${API_BASE_URL}/create`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ full_url: newUrl }),
+        body: JSON.stringify({ full_url: newUrl, email: user.email }),
       });
 
       if (!response.ok) {
@@ -140,7 +160,7 @@ const URLManager = () => {
         {
           short_url: newShortUrl.short_url.split("/").pop(),
           full_url: newShortUrl.full_url,
-          created_at: null, 
+          created_at: null,
           visits: 0,
         },
         ...urls,
@@ -149,13 +169,13 @@ const URLManager = () => {
     } catch (error) {
       console.error("Error creating short URL:", error);
     } finally {
-      setIsLoading(false);
+      setIsLoadingLocal(false);
     }
   };
 
   const copyToClipboard = (short_url) => {
     navigator.clipboard.writeText(`${ip}${short_url}`);
-    setCopySuccess(short_url); 
+    setCopySuccess(short_url);
     setTimeout(() => setCopySuccess(""), 500);
   };
 
@@ -173,7 +193,9 @@ const URLManager = () => {
       </div>
     </div>
   );
-
+  if (isLoading) return <div>Loading...</div>;
+  // else console.log(user);
+  if (!user) return <LandingPage />;
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50">
       {/* Header */}
@@ -208,11 +230,24 @@ const URLManager = () => {
                   {tab}
                 </button>
               ))}
+              <UserAvatar />
+              {isAuthenticated ? (
+                <button
+                  onClick={() =>
+                    logout({
+                      logoutParams: { returnTo: window.location.origin },
+                    })
+                  }
+                >
+                  Log out
+                </button>
+              ) : (
+                <button onClick={() => loginWithRedirect()}>Log in</button>
+              )}
             </nav>
           </div>
         </div>
       </div>
-
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {activeTab === "dashboard" && (
           <div className="space-y-8">
@@ -233,15 +268,15 @@ const URLManager = () => {
                 </div>
                 <button
                   onClick={createShortUrl}
-                  disabled={isLoading || !newUrl.trim()}
+                  disabled={isLoadingLocal || !newUrl.trim()}
                   className="px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg hover:from-indigo-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 transition-all"
                 >
-                  {isLoading ? (
+                  {isLoadingLocal ? (
                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   ) : (
                     <Plus className="w-5 h-5" />
                   )}
-                  <span>{isLoading ? "Creating...." : "Create"}</span>
+                  <span>{isLoadingLocal ? "Creating...." : "Create"}</span>
                 </button>
               </div>
             </div>
@@ -268,12 +303,12 @@ const URLManager = () => {
               <StatCard
                 icon={TrendingUp}
                 title="Avg Clicks/URL"
-                value={
+                value={(
                   urls.reduce(
                     (sum, url) => parseInt(sum) + parseInt(url.visits),
                     0
                   ) / (urls.length || 1)
-                }
+                ).toFixed(2)}
                 subtitle="Performance metric"
                 color="yellow"
               />
@@ -281,12 +316,12 @@ const URLManager = () => {
                 icon={Users}
                 title="Today's Visits"
                 value={visitData
-                  .filter(
-                    (v) =>
-                      new Date(v.date).toDateString() ===
-                      new Date().toDateString()
-                  )
-                  .reduce((sum, v) => parseInt(sum) + parseInt(v.visits), 0)}
+                  .filter((v) => {
+                    const visitTime = new Date(v.date).getTime();
+                    const now = Date.now();
+                    return now - visitTime <= 24 * 60 * 60 * 1000; // 24 hours in ms
+                  })
+                  .reduce((sum, v) => sum + parseInt(v.visits), 0)}
                 subtitle="Last 24 hours"
                 color="purple"
               />
