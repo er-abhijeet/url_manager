@@ -46,7 +46,7 @@ const URLManager = () => {
   const [visitDetails, setVisitDetails] = useState([]);
   const API_BASE_URL = "http://localhost:3003" || import.meta.env.VITE_back_url;
   const ip = API_BASE_URL + "/";
-  const [user_mail, setUser_mail] = useState("");
+  const { getAccessTokenSilently } = useAuth0();
 
   const { user, isLoading, loginWithRedirect, logout, isAuthenticated } =
     useAuth0();
@@ -55,13 +55,18 @@ const URLManager = () => {
 
   useEffect(() => {
     const fetchUrls = async () => {
+      const token = await getAccessTokenSilently();
       try {
         setIsLoadingLocal(true);
         if (!isLoading && isAuthenticated && user) {
           console.log("User info:", user.email);
           // setUser_mail(user.email); // Set email here
           const response = await fetch(
-            `${API_BASE_URL}/urls?email=${user.email}`
+            `${API_BASE_URL}/urls?email=${user.email}`,{
+              headers: {
+                Authorization: `Bearer ${token}`
+              }
+            }
           );
           // const response = await fetch(`${API_BASE_URL}/urls?email=${encodeURIComponent(user.email)}`);
           const data = await response.json();
@@ -86,11 +91,17 @@ const URLManager = () => {
 
       try {
         setIsLoadingLocal(true);
+const token = await getAccessTokenSilently();
 
         const visitsResponse = await fetch(
-          `${API_BASE_URL}/analytics/${selectedUrl.short_url}/visits-by-date`
+          `${API_BASE_URL}/analytics/visits-by-date`,{
+            headers: {
+        Authorization: `Bearer ${token}`
+      }
+          }
         );
         const visitsData = await visitsResponse.json();
+        console.log('Visits Data:', visitsData);
         setVisitData(
           visitsData.map((item) => ({
             ...item,
@@ -102,10 +113,14 @@ const URLManager = () => {
             visits: Number(item.visits),
           }))
         );
-        // console.log('Visit Data:', visitsData);
+        console.log('Visit Data:', visitsData);
 
         const devicesResponse = await fetch(
-          `${API_BASE_URL}/analytics/${selectedUrl.short_url}/devices`
+          `${API_BASE_URL}/analytics/${selectedUrl.short_url}/devices`,{
+            headers: {
+        Authorization: `Bearer ${token}`
+      }
+          }
         );
         const devicesData = await devicesResponse.json();
         setDeviceData(
@@ -116,15 +131,22 @@ const URLManager = () => {
           }))
         );
         // console.log('Device Data:', devicesData);
-
         const osResponse = await fetch(
-          `${API_BASE_URL}/analytics/${selectedUrl.short_url}/oses`
+          `${API_BASE_URL}/analytics/${selectedUrl.short_url}/oses`,{
+            headers: {
+        Authorization: `Bearer ${token}`
+      }
+          }
         );
         const osData = await osResponse.json();
         setOsData(osData);
 
         const visitDetailsResponse = await fetch(
-          `${API_BASE_URL}/analytics/${selectedUrl.short_url}/visits`
+          `${API_BASE_URL}/analytics/${selectedUrl.short_url}/visits`,{
+            headers: {
+        Authorization: `Bearer ${token}`
+      }
+          }
         );
         const visitDetailsData = await visitDetailsResponse.json();
         setVisitDetails(visitDetailsData);
@@ -140,6 +162,7 @@ const URLManager = () => {
 
   const createShortUrl = async () => {
     if (!newUrl.trim()) return;
+    const token = await getAccessTokenSilently();
 
     try {
       setIsLoadingLocal(true);
@@ -147,6 +170,7 @@ const URLManager = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify({ full_url: newUrl, email: user.email }),
       });
@@ -179,7 +203,7 @@ const URLManager = () => {
     setTimeout(() => setCopySuccess(""), 500);
   };
 
-  const StatCard = ({ icon: Icon, title, value, subtitle, color = "blue" }) => (
+  const StatCard = ({ icon: Icon,  title, value, subtitle, color = "blue" }) => (
     <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
       <div className="flex items-center justify-between">
         <div>

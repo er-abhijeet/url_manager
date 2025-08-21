@@ -8,7 +8,7 @@ const LandingPage = () => {
     <div className="min-h-screen bg-gradient-to-br from-blue-100 to-white flex items-center justify-center px-6">
       <div className="text-center max-w-xl">
         <h1 className="text-4xl font-bold text-gray-800 mb-4">
-          Welcome to <span className="text-blue-600">YourApp</span>
+          Welcome to <span className="text-blue-600">URL Manager</span>
         </h1>
         <p className="text-gray-600 mb-8 text-lg">
           Sign in to explore personalized features, your dashboard, and more.

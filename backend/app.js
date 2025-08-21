@@ -5,6 +5,7 @@ import cookieParser from 'cookie-parser';
 import { nanoid } from 'nanoid';
 import { UAParser } from 'ua-parser-js';
 import cors from "cors";
+import authMiddleware from './authMiddleware.js';
 
 const client_url = "http://192.168.31.232:3003/";
 dotenv.config();
@@ -62,6 +63,18 @@ db.connect()
 //   next();
 // });
 
+// Error handling middleware
+app.use((err, req, res, next) => {
+  if (err.name === 'UnauthorizedError') {
+    res.status(401).json({ 
+      error: 'Invalid token',
+      message: 'You must be authenticated to access this resource'
+    });
+  } else {
+    next(err);
+  }
+});
+
 app.get('/', (req, res) => {
   console.log('Client IP:', req.ip);
   console.log('IP chain:', req.ips);
@@ -70,7 +83,7 @@ app.get('/', (req, res) => {
   res.json({ ip: req.ip, ips: req.ips });
 });
 
-app.get("/test", async (req, res) => {
+app.get("/test", authMiddleware, async (req, res) => {
     try {
         const result = await db.query("SELECT * FROM url_map");
         res.json(result.rows);
@@ -101,7 +114,7 @@ async function generateUniqueShortUrl(full_url,email) {
   throw new Error('Failed to generate unique short URL after several attempts.');
 }
 
-app.post('/create', async (req, res) => {
+app.post('/create', authMiddleware, async (req, res) => {
   const { full_url,email } = req.body;
 
   if (!full_url) {
@@ -123,7 +136,7 @@ app.post('/create', async (req, res) => {
 
 
 
-app.get('/urls', async (req, res) => {
+app.get('/urls', authMiddleware, async (req, res) => {
     const email=req.query.email;
     // console.log(email)
   try {
@@ -146,18 +159,16 @@ app.get('/urls', async (req, res) => {
   }
 });
 
-app.get('/analytics/:short_url/visits-by-date', async (req, res) => {
+app.get('/analytics/visits-by-date', authMiddleware, async (req, res) => {
   try {
-    const { short_url } = req.params;
     const result = await db.query(`
       SELECT 
         DATE(visited_at) AS date,
         COUNT(*) AS visits
       FROM url_visits
-      WHERE short_url = $1
       GROUP BY date
       ORDER BY date ASC
-    `, [short_url]);
+    `);
     res.json(result.rows);
   } catch (err) {
     console.error(err);
@@ -165,7 +176,7 @@ app.get('/analytics/:short_url/visits-by-date', async (req, res) => {
   }
 });
 
-app.get('/analytics/:short_url/devices', async (req, res) => {
+app.get('/analytics/:short_url/devices', authMiddleware, async (req, res) => {
   const { short_url } = req.params;
   const result = await db.query(`
     SELECT device_type AS name, COUNT(*) AS value
@@ -176,7 +187,7 @@ app.get('/analytics/:short_url/devices', async (req, res) => {
   res.json(result.rows);
 });
 
-app.get('/analytics/:short_url/oses', async (req, res) => {
+app.get('/analytics/:short_url/oses', authMiddleware, async (req, res) => {
   const { short_url } = req.params;
   const result = await db.query(`
     SELECT os_type AS name, COUNT(*) AS visits
@@ -187,7 +198,7 @@ app.get('/analytics/:short_url/oses', async (req, res) => {
   res.json(result.rows);
 });
 
-app.get('/analytics/:short_url/visits', async (req, res) => {
+app.get('/analytics/:short_url/visits', authMiddleware, async (req, res) => {
   const { short_url } = req.params;
   const result = await db.query(`
     SELECT 
