@@ -44,7 +44,7 @@ const URLManager = () => {
   const [deviceData, setDeviceData] = useState([]);
   const [osData, setOsData] = useState([]);
   const [visitDetails, setVisitDetails] = useState([]);
-  const API_BASE_URL = "http://localhost:3003" || import.meta.env.VITE_back_url;
+  const API_BASE_URL = import.meta.env.VITE_back_url;
   const ip = API_BASE_URL + "/";
   const { getAccessTokenSilently } = useAuth0();
 
