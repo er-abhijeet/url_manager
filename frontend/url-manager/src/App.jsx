@@ -59,7 +59,6 @@ const URLManager = () => {
       try {
         setIsLoadingLocal(true);
         if (!isLoading && isAuthenticated && user) {
-          console.log("User info:", user.email);
           // setUser_mail(user.email); // Set email here
           const response = await fetch(
             `${API_BASE_URL}/urls?email=${user.email}`,{
@@ -101,7 +100,7 @@ const token = await getAccessTokenSilently();
           }
         );
         const visitsData = await visitsResponse.json();
-        console.log('Visits Data:', visitsData);
+
         setVisitData(
           visitsData.map((item) => ({
             ...item,
@@ -113,7 +112,6 @@ const token = await getAccessTokenSilently();
             visits: Number(item.visits),
           }))
         );
-        console.log('Visit Data:', visitsData);
 
         const devicesResponse = await fetch(
           `${API_BASE_URL}/analytics/${selectedUrl.short_url}/devices`,{
